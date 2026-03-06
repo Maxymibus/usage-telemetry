@@ -46,3 +46,5 @@ appsettings.*.local.json
 ## Upload artifacts (runtime data)
 **/wwwroot/Uploads/*.csv
 **/wwwroot/Uploads/*.pdf
+/Flywheel.Ingestion.WebJob/appsettings.json
+/Flywheel.WebApp/appsettings.json
