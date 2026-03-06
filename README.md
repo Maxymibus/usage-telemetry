@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start"><img src="https://img.shields.io/badge/.NET-9.0-512bd4?style=flat-square&logo=dotnet" alt=".NET 9" /></a>
-  <a href="#authentication"><img src="https://img.shields.io/badge/Auth-Entra%20ID-0078d4?style=flat-square&logo=microsoftazure" alt="Entra ID" /></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/.NET-9.0-512bd4?style=flat-square&logo=csharp" alt=".NET 9" /></a>
+  <a href="#authentication"><img src="https://img.shields.io/badge/Auth-Entra%20ID-0078d4?style=flat-square&logo=microsoft" alt="Entra ID" /></a>
   <a href="#kql-query-library"><img src="https://img.shields.io/badge/KQL%20Queries-27-38bdf8?style=flat-square" alt="27 KQL Queries" /></a>
   <a href="LICENSE.txt"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="MIT License" /></a>
 </p>
