@@ -5,8 +5,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.Configure<AzureOpenAIOptions>(builder.Configuration.GetSection(AzureOpenAIOptions.SectionName));
+builder.Services.Configure<AzureSearchOptions>(builder.Configuration.GetSection(AzureSearchOptions.SectionName));
 
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IStorageService, StorageService>();
+builder.Services.AddSingleton<ISearchService, SearchService>();
 builder.Services.AddSingleton<IChatService, AzureOpenAIChatService>();
 
 builder.Services.AddRazorPages();

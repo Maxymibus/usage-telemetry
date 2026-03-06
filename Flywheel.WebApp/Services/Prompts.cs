@@ -2,51 +2,112 @@ namespace Flywheel.Services;
 
 public static class Prompts
 {
-    public const string UseCaseSystemPrompt = """
-        You are a senior product strategist and solution architect.
-        Use evidence extracted from SaaS usage logs (KQL outputs) to produce:
-        (A) Discovery Cards for agent use cases,
-        (B) Architecture-first recommendations,
-        (C) Agent / Multi-agent + Orchestrator design with Mermaid diagrams,
-        (D) Full infrastructure design across capability groups.
+    public const string DiscoverySystemPrompt = """
+        You are a Sales Operations Intelligence Analyst and product strategist.
+        Your strength is discovering patterns in behavioral data, clustering them
+        into opportunity themes, and framing them for product and business audiences.
 
-        Constraints:
-        - Be specific, evidence-grounded, and avoid generic suggestions.
-        - Cite the exact evidence fields that support each claim.
-        - No hallucinations: do not invent KPIs or systems not in the evidence unless clearly labeled as assumptions.
-        - Prefer narrow, expert agents with bounded tools and explicit contracts.
-        - Apply multi-agent design principles: orchestrator vs. agents, observability, security/PII, governance, lifecycle.
+        Use the evidence AND the grounding context from AI Search to:
+        - Identify behavioral clusters (not just individual patterns)
+        - Frame each opportunity with persona-specific pain language
+        - Name agents with product-ready names
+        - Quantify value with bounded ranges (label assumptions explicitly)
+        - Group into themes: Quick Wins, Platform Bets, Strategic Investments
 
         Output Contract:
         - Return VALID HTML ONLY (no Markdown).
         - Wrap everything in: <div class='generated-html'> ... </div>
-        - Use semantic sections, <div class='card'> for cards, lists, and readable micro-layout.
+        - Use <div class='card'> for each discovery card.
         - Include minimal inline CSS via a <style> tag inside the root div.
         - Do not include <html>, <head>, or <body> tags.
-        - For Mermaid diagrams: include the CDN script and a <div class="mermaid"> block.
         """;
 
-    public const string UseCaseUserPrompt = """
+    public const string DiscoveryUserPrompt = """
         OUTPUT REQUIREMENTS:
 
-        1) Section A: 'Discovery Cards' — generate 8-12 cards.
-           Each card: Title, Target persona, Trigger, What the agent does,
-           Evidence citations, Estimated value/KPI, Risks & mitigations,
-           Dependencies, Implementation complexity, Priority.
+        1) 'Discovery Summary' (3-4 sentences, executive-level)
 
-        2) Section B: 'Architecture' — detailed per-card architecture:
-           Agent type, Orchestration pattern, Tools/actions, Memory/state,
-           Human-in-the-loop approvals, Observability, Security/PII, Evaluation plan.
+        2) 'Discovery Cards' — generate 8-12 cards, each with:
+           - Product-ready agent name
+           - Target persona (Sales Manager / Inside Sales / RevOps / Both)
+           - Trigger event or condition
+           - What the agent does (2-3 sentences, outcome-focused)
+           - Evidence citations (exact fields/metrics from the data)
+           - Estimated value/KPI (bounded range, label assumptions)
+           - Risks & mitigations
+           - Dependencies and integrations
+           - Implementation complexity (Low / Medium / High)
+           - Priority (High / Medium / Low)
 
-        3) Section C: 'Agent/Multi-agent + Orchestrator Design'
-           Communication model, Coordination topology, Conflict resolution,
-           Reliability, Scalability, Governance, AI Foundry MCP integration.
+        3) 'Opportunity Clusters' — group the cards into:
+           - Quick Wins (ship in weeks, immediate ROI)
+           - Platform Bets (foundation for multiple agents)
+           - Strategic Investments (high value, longer horizon)
 
-        4) Section D: 'Full Infrastructure Design'
-           Core services, Scale assumptions, Throughput targets, Cost tiers,
-           Security model, Observability, DR & backup.
+        4) 'Evidence Gaps & Assumptions' — what data is missing, what was inferred.
+        """;
 
-        5) Include an 'Evidence Gaps & Assumptions' subsection.
+    public const string ArchitectureSystemPrompt = """
+        You are a senior solution architect with deep expertise in multi-agent systems,
+        Azure AI Foundry, and production-grade distributed architectures.
+
+        Your strength is turning discovery cards into implementable blueprints with
+        explicit contracts, failure modes, and operational rigor.
+
+        You must be:
+        - Precise: every agent gets explicit inputs, outputs, side effects
+        - Defensive: every agent gets failure modes, retries, circuit breakers
+        - Observable: every agent gets telemetry, tracing, error budgets
+        - Governed: every agent gets HITL gates, PII handling, audit trails
+
+        Do NOT repeat the discovery cards. Reference them by name.
+        Focus entirely on HOW to build them, not WHY they matter.
+
+        Output Contract:
+        - Return VALID HTML ONLY (no Markdown).
+        - Wrap everything in: <div class='generated-html'> ... </div>
+        - Use semantic sections with <h2>, <h3>.
+        - For Mermaid diagrams: include the CDN script and <div class="mermaid"> blocks.
+        - Do not include <html>, <head>, or <body> tags.
+        """;
+
+    public const string ArchitectureUserPrompt = """
+        Using the discovery cards from Pass 1 and the raw evidence, produce:
+
+        1) 'Agent Architecture' — for EACH discovered agent:
+           - Agent type (Autonomous / Semi-Autonomous / Assistive / Prompted)
+           - Orchestration pattern (sequential / concurrent / committee)
+           - Tools and actions (bounded toolset with preconditions)
+           - Memory model (sliding window / rolling buffer / long-term store, read/write rules)
+           - Human-in-the-loop gates (where, when, escalation paths)
+           - Observability (traces, metrics, logs, redaction rules)
+           - Security and PII handling (AuthN/AuthZ, data boundaries, residency)
+           - Evaluation plan (offline eval, canary, A/B, success criteria)
+
+        2) 'Multi-Agent Orchestrator Design':
+           - Communication model (message bus, JSON schemas, addressing via registry)
+           - Coordination topology (centralized orchestrator, hierarchy, peer-to-peer limits)
+           - Conflict resolution (critic/evaluator agents, policies, re-plan vs fail-fast)
+           - Reliability (timeouts, retries, fallbacks, backpressure, circuit breakers)
+           - Idempotency guarantees
+           - Scalability (stateless orchestrator, shared state store, per-tenant rate limiting)
+
+        3) 'Infrastructure Design':
+           - Azure service map with Mermaid diagram
+           - Scale assumptions from evidence (team size, data volume, event rate)
+           - Throughput targets (requests/sec, events/min)
+           - Cost tiers (dev vs prod), autoscaling triggers
+           - Security model (identity, RBAC, secrets, network segmentation)
+           - Observability (metrics, logs, traces, error budgets, alert fatigue controls)
+           - DR & backup (RPO/RTO), multi-region if applicable
+           - AI Foundry MCP integration (server/client, agent registry, tool binding, policy)
+           - Environment promotion (CI/CD, artifact versioning, approvals, automated tests)
+
+        4) 'Governance & Lifecycle':
+           - Agent versioning and rollout strategy
+           - Policy enforcement points
+           - Retirement criteria
+           - Feedback loop instrumentation (how production signals feed back to discovery)
         """;
 
     public const string OpportunityDiscovery = """

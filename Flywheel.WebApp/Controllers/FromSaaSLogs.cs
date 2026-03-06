@@ -15,6 +15,7 @@ public sealed class FromSaaSLogsController : Controller
     private readonly IWebHostEnvironment _env;
     private readonly IStorageService _storage;
     private readonly IChatService _chat;
+    private readonly ISearchService _search;
 
     private const string SessionChatKey = "ChatHistoryDtos";
     private const string SessionFilesKey = "UploadedFiles";
@@ -22,11 +23,16 @@ public sealed class FromSaaSLogsController : Controller
     private string UploadPath =>
         Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "Uploads");
 
-    public FromSaaSLogsController(IWebHostEnvironment env, IStorageService storage, IChatService chat)
+    public FromSaaSLogsController(
+        IWebHostEnvironment env,
+        IStorageService storage,
+        IChatService chat,
+        ISearchService search)
     {
         _env = env;
         _storage = storage;
         _chat = chat;
+        _search = search;
     }
 
     [HttpPost("CreateUploadSas")]
@@ -121,13 +127,75 @@ public sealed class FromSaaSLogsController : Controller
         if (req is null || string.IsNullOrWhiteSpace(req.JobId))
             return HtmlContent("<p>jobId is required.</p>");
 
-        var csvTexts = await _storage.LoadEvidenceCsvsAsync(req.JobId.Trim());
+        var jobId = req.JobId.Trim();
+        var csvTexts = await _storage.LoadEvidenceCsvsAsync(jobId);
         if (csvTexts.Count == 0)
             return HtmlContent("<p>No evidence CSVs found yet. Wait for processing to complete.</p>");
 
         var evidence = EvidenceBuilder.Build(csvTexts);
-        var html = await _chat.GenerateUseCasesAsync(evidence);
-        return Content(html, "text/html");
+
+        var grounding = "";
+        if (_search.IsEnabled)
+        {
+            grounding = await _search.RetrieveGroundingAsync(
+                "Analyze SaaS usage patterns, identify agent automation opportunities, " +
+                "friction points, rework loops, and suggest multi-agent architectures " +
+                "with discovery cards grounded in behavioral evidence.");
+        }
+
+        var discoveryHtml = await _chat.RunDiscoveryPassAsync(evidence, grounding);
+
+        var architectureHtml = await _chat.RunArchitecturePassAsync(evidence, discoveryHtml);
+
+        var combined = $"""
+            <div class='generated-html'>
+                <style>
+                    .pass-header {{
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        padding: 12px 16px;
+                        margin: 24px 0 16px 0;
+                        border-radius: 8px;
+                        font-size: 1.1em;
+                        font-weight: 600;
+                    }}
+                    .pass-discovery {{
+                        background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+                        color: #7dd3fc;
+                        border: 1px solid #38bdf8;
+                    }}
+                    .pass-architecture {{
+                        background: linear-gradient(135deg, #1a2e05 0%, #2d4a0a 100%);
+                        color: #86efac;
+                        border: 1px solid #4ade80;
+                    }}
+                    .pass-tag {{
+                        font-size: 0.7em;
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                    }}
+                    .tag-rag {{ background: #0c4a6e; color: #7dd3fc; }}
+                    .tag-precise {{ background: #14532d; color: #86efac; }}
+                </style>
+
+                <div class="pass-header pass-discovery">
+                    <span>Pass 1: Discovery &amp; Opportunity Clustering</span>
+                    <span class="pass-tag tag-rag">RAG-Grounded</span>
+                </div>
+                {discoveryHtml}
+
+                <div class="pass-header pass-architecture">
+                    <span>Pass 2: Production Architecture &amp; Hardening</span>
+                    <span class="pass-tag tag-precise">Evidence-Precise</span>
+                </div>
+                {architectureHtml}
+            </div>
+            """;
+
+        return Content(combined, "text/html");
     }
 
     private async Task<string> ContinueConversationAsync(string prompt)

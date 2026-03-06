@@ -148,8 +148,13 @@ static async Task ProcessJobAsync(
 
     var csvConfigNoHeader = new CsvConfiguration(CultureInfo.InvariantCulture)
     {
-        HasHeaderRecord = false, DetectDelimiter = true, BadDataFound = null,
-        MissingFieldFound = null, HeaderValidated = null, IgnoreBlankLines = true, TrimOptions = TrimOptions.Trim
+        HasHeaderRecord = false,
+        DetectDelimiter = true,
+        BadDataFound = null,
+        MissingFieldFound = null,
+        HeaderValidated = null,
+        IgnoreBlankLines = true,
+        TrimOptions = TrimOptions.Trim
     };
 
     int fieldCount;
@@ -172,8 +177,13 @@ static async Task ProcessJobAsync(
     bool hasHeader = FirstRowLooksHeader(sampleRows[0]);
     var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
     {
-        HasHeaderRecord = hasHeader, DetectDelimiter = true, BadDataFound = null,
-        MissingFieldFound = null, HeaderValidated = null, IgnoreBlankLines = true, TrimOptions = TrimOptions.Trim
+        HasHeaderRecord = hasHeader,
+        DetectDelimiter = true,
+        BadDataFound = null,
+        MissingFieldFound = null,
+        HeaderValidated = null,
+        IgnoreBlankLines = true,
+        TrimOptions = TrimOptions.Trim
     };
 
     var profiles = Enumerable.Range(0, fieldCount).Select(i => new ColumnProfile(i)).ToList();
@@ -213,7 +223,7 @@ static async Task ProcessJobAsync(
         ValidateKqlPlan(plan);
 
         var libraryQueries = kqlLibrary.BuildQueries();
-        plan = plan with { Queries = MergeQueries(plan.Queries, libraryQueries, minQueries) };
+        plan = plan with { Queries = MergeQueries(plan.Queries ?? [], libraryQueries, minQueries) };
 
         var heurMap = InferMappingFromProfiles(fieldCount, profiles);
         if (MappingLooksWeak(plan.Mapping))
@@ -246,7 +256,9 @@ static async Task ProcessJobAsync(
 
             var props = new Dictionary<string, string>
             {
-                ["JobId"] = job.JobId, ["BlobName"] = job.BlobName, ["OriginalFileName"] = job.OriginalFileName,
+                ["JobId"] = job.JobId,
+                ["BlobName"] = job.BlobName,
+                ["OriginalFileName"] = job.OriginalFileName,
                 ["RowTimestamp"] = dtoTime.ToString("o"),
                 ["User"] = DeriveUser(Get(plan.Mapping.UserIndex), otherFields),
                 ["Role"] = NormalizeCategorical(Get(plan.Mapping.RoleIndex), "Role"),
@@ -316,12 +328,11 @@ static async Task ProcessJobAsync(
 
 static TokenCredential BuildCredential(IConfiguration config)
 {
-    var inAzure = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
     var tenantId = config["AzureOpenAI:TenantId"] ?? config["AZURE_TENANT_ID"] ?? config["TenantId"];
-    if (inAzure) return new ManagedIdentityCredential();
-    return !string.IsNullOrWhiteSpace(tenantId)
-        ? new AzureCliCredential(new AzureCliCredentialOptions { TenantId = tenantId })
-        : new AzureCliCredential();
+    return new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+        TenantId = string.IsNullOrWhiteSpace(tenantId) ? null : tenantId,
+    });
 }
 
 static int ParseConfigInt(IConfiguration config, string key, int defaultVal, int min, int max) =>
@@ -333,8 +344,9 @@ static List<string> ReadRowAsList(CsvReader csv, int fieldCount) =>
 static string BuildRawSampleCsv(List<List<string>> sampleRows) =>
     string.Join('\n', sampleRows.Select(row => string.Join(',', row.Select(CsvEscape))));
 
-static bool MappingLooksWeak(MappingPlan map)
+static bool MappingLooksWeak(MappingPlan? map)
 {
+    if (map is null) return true;
     int nulls = 0;
     if (map.TimestampIndex is null) nulls++;
     if (map.UserIndex is null) nulls++;
@@ -374,12 +386,21 @@ static async Task<KqlPlan> GetKqlPlanFromAoai(
 {
     var input = new
     {
-        fileName = job.OriginalFileName, fieldCount, totalRows, sampleRows, sampleCsvText,
+        fileName = job.OriginalFileName,
+        fieldCount,
+        totalRows,
+        sampleRows,
+        sampleCsvText,
         columnProfiles = profiles.Select(p => new
         {
-            index = p.Index, sampleCount = p.SampleCount, parsedDateCount = p.ParsedDateCount,
-            parsedDoubleCount = p.ParsedDoubleCount, emptyCount = p.EmptyCount, distinctCount = p.DistinctCount,
-            looksEmailLike = p.LooksEmailLike, looksAlphaCategorical = p.LooksAlphaCategorical
+            index = p.Index,
+            sampleCount = p.SampleCount,
+            parsedDateCount = p.ParsedDateCount,
+            parsedDoubleCount = p.ParsedDoubleCount,
+            emptyCount = p.EmptyCount,
+            distinctCount = p.DistinctCount,
+            looksEmailLike = p.LooksEmailLike,
+            looksAlphaCategorical = p.LooksAlphaCategorical
         })
     };
 

@@ -26,3 +26,13 @@ public sealed class AzureOpenAIOptions
     public string DeploymentName { get; set; } = "";
     public string? TenantId { get; set; }
 }
+
+public sealed class AzureSearchOptions
+{
+    public const string SectionName = "AzureSearch";
+
+    public string Endpoint { get; set; } = "";
+    public string KnowledgeBaseName { get; set; } = "flywheel-kb";
+    public string ApiVersion { get; set; } = "2025-11-01-preview";
+    public bool Enabled { get; set; } = true;
+}
