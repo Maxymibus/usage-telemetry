@@ -1,0 +1,151 @@
+﻿
+/* Dark theme CSS variables extracted from all.min.css */
+[data-color-theme=dark], html[data-color-theme=dark] [data-color-theme] {
+    color-scheme: dark;
+    --gray-100: #39393d;
+    --gray-200: #3f4044;
+    --gray-300: #46474a;
+    --gray-400: #4d4d51;
+    --gray-500: #6e6f71;
+    --gray-600: #909092;
+    --gray-700: #b1b1b3;
+    --gray-800: #d2d3d3;
+    --gray-900: #f4f4f4;
+    --dark: #08090a;
+    --dark-rgb: 8,9,10;
+    --light: #383940;
+    --light-rgb: 56,57,64;
+    --body-bg: #202125;
+    --body-color: #fff;
+    --body-color-rgb: 255,255,255;
+    --border-color: #4d4d51;
+    --border-color-translucent: rgba(255, 255, 255, 0.125);
+    --box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.2);
+    --link-color: #6db5ff;
+    --link-rgb-color: 109,181,255;
+    --link-hover-color: #a0cfff;
+    --highlight-bg: rgba(255, 255, 255, 0.3);
+    --code-color: #f57d9e
+}
+
+/* Dark cards (override Bootstrap card variables) */
+html[data-color-theme="dark"] .card {
+    --card-bg: #2c2d33;
+    --card-border-color: rgba(255,255,255,0.125);
+    --card-color: var(--body-color);
+    background-color: var(--card-bg);
+    color: var(--card-color);
+    border-color: var(--card-border-color);
+}
+
+/* Make card header/footer look native in dark */
+html[data-color-theme="dark"] .card-header,
+html[data-color-theme="dark"] .card-footer {
+    background-color: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.125);
+}
+
+[data-color-theme=dark], [data-color-theme=dark] .form-control:not([data-color-theme]), html[data-color-theme=dark] .form-control {
+    color-scheme: dark;
+    --input-bg: #2c2d33;
+    --input-focus-bg: #2c2d33
+}
+
+    /* -------------------------------------------------
+   Dark theme: form controls (from all.min.css logic)
+   ------------------------------------------------- */
+    html[data-color-theme=dark] .form-control,
+    [data-color-theme=dark] .form-control:not([data-color-theme]) {
+        color-scheme: dark;
+        --input-bg: #2c2d33;
+        --input-focus-bg: #2c2d33;
+    }
+
+    /* Checkboxes & radios */
+    html[data-color-theme=dark] .form-check-input,
+    [data-color-theme=dark] .form-check-input:not([data-color-theme]) {
+        color-scheme: dark;
+        --form-check-input-bg: #2c2d33;
+    }
+
+    /* Selects (base) */
+    html[data-color-theme=dark] .form-select,
+    [data-color-theme=dark] .form-select:not([data-color-theme]) {
+        color-scheme: dark;
+        --form-select-bg: #2c2d33;
+    }
+
+/* Optional polish: ensure border/text matches dark palette */
+html[data-color-theme=dark] .form-control,
+html[data-color-theme=dark] .form-select {
+    border-color: var(--border-color);
+    color: var(--body-color);
+}
+
+    html[data-color-theme=dark] .form-control::placeholder {
+        color: var(--gray-600);
+    }
+
+/* Dark theme: alert-light (copied from all.min.css dark override) */
+html[data-color-theme=dark] .alert-light,
+[data-color-theme=dark] .alert-light:not([data-color-theme]) {
+    color-scheme: dark;
+    --alert-color: #ced1d7;
+    --alert-bg: rgba(62, 65, 70, 0.25);
+    --alert-border-color: #5e6269;
+    --alert-link-color: #a5a7ac;
+    --alert-link-hover-color: #909297;
+}
+
+
+/* Dark theme (form-select) */
+.form-select[data-color-theme=dark],
+[data-color-theme=dark] .form-select:not([data-color-theme]),
+html[data-color-theme=dark] .form-select{
+  color-scheme: dark;
+  --form-select-bg: #2c2d33;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%28255, 255, 255, 0.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+}
+
+/* Dark theme (valid state icon combo) */
+[data-color-theme=dark] .form-select.is-valid:not([multiple]):not([size]),
+[data-color-theme=dark] .form-select.is-valid:not([multiple])[size="1"],
+[data-color-theme=dark] .was-validated .form-select:valid:not([multiple]):not([size]),
+[data-color-theme=dark] .was-validated .form-select:valid:not([multiple])[size="1"]{
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%28255, 255, 255, 0.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e"),
+                    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23059669' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+}
+
+/* Dark theme (invalid state icon combo) */
+[data-color-theme=dark] .form-select.is-invalid:not([multiple]):not([size]),
+[data-color-theme=dark] .form-select.is-invalid:not([multiple])[size="1"],
+[data-color-theme=dark] .was-validated .form-select:invalid:not([multiple]):not([size]),
+[data-color-theme=dark] .was-validated .form-select:invalid:not([multiple])[size="1"]{
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%28255, 255, 255, 0.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e"),
+                    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23EF4444'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23EF4444' stroke='none'/%3e%3c/svg%3e");
+}
+
+
+/* Dark theme: make dropdown menus dark when the page is dark */
+html[data-color-theme="dark"] .dropdown-menu,
+[data-color-theme="dark"] .dropdown-menu {
+    --dropdown-color: var(--white);
+    --dropdown-bg: #2c2d33; /* match your control bg */
+    --dropdown-border-color: rgba(255,255,255,0.125);
+    --dropdown-box-shadow: var(--box-shadow);
+    --dropdown-link-color: var(--white);
+    --dropdown-link-hover-color: var(--white);
+    --dropdown-link-hover-bg: rgba(255,255,255,0.10);
+    --dropdown-link-active-color: var(--white);
+    --dropdown-link-active-bg: rgba(255,255,255,0.20);
+    --dropdown-link-disabled-color: var(--gray-500);
+    --dropdown-divider-bg: rgba(255,255,255,0.15);
+    --dropdown-header-color: var(--gray-500);
+}
+
+/* Optional: ensure items inherit the correct text color */
+html[data-color-theme="dark"] .dropdown-item,
+[data-color-theme="dark"] .dropdown-item {
+    color: var(--dropdown-link-color);
+}
+

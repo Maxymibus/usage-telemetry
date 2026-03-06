@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Flywheel.WebApp/Flywheel.WebApp.csproj" />
+  <Project Path="Flywheel.Ingestion.WebJob/Flywheel.Ingestion.WebJob.csproj" />
+</Solution>

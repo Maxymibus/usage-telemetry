@@ -1,0 +1,234 @@
+{
+  "preamble": {
+    "normalized": "let _raw =\nAppEvents\n| where TimeGenerated > ago(24h)\n| where Name == 'SaaSUserAction'\n| extend JobId = tostring(Properties.JobId)\n| where JobId == '{{JOBID}}'\n| extend\n    RowTs = todatetime(tostring(Properties.RowTimestamp)),\n    User = iff(isempty(tostring(Properties.User)) or tostring(Properties.User) == 'unknown', 'user_unlabeled', tostring(Properties.User)),\n    Role = iff(isempty(tostring(Properties.Role)) or tostring(Properties.Role) == 'unknown', 'role_unlabeled', tostring(Properties.Role)),\n    Task = iff(isempty(tostring(Properties.Task)) or tostring(Properties.Task) == 'unknown', 'Task_unlabeled', tostring(Properties.Task)),\n    Action = iff(isempty(tostring(Properties.Action)) or tostring(Properties.Action) == 'unknown', 'Action_unlabeled', tostring(Properties.Action)),\n    SessionId = tostring(Properties.SessionId),\n    DurationMs = todouble(tostring(Properties.DurationMs))\n| where isnotnull(RowTs)\n| project RowTs, User, Role, Task, Action, SessionId, DurationMs;\n"
+  },
+  "defaultMapping": {
+    "timestampIndex": 0,
+    "userIndex": 1,
+    "roleIndex": null,
+    "taskIndex": 3,
+    "actionIndex": 2,
+    "sessionIdIndex": null,
+    "durationMsIndex": 4
+  },
+  "queries": [
+    {
+      "id": "Q01", "name": "TopTasks",
+      "purpose": "Top tasks ranked by execution count and distinct users",
+      "appendTo": "patterns.tasks",
+      "outputColumns": ["Task","Role","Executions","Users","AvgDurationMs"],
+      "suffix": "\n_raw\n| summarize Executions=count(), Users=dcount(User), AvgDurationMs=avg(DurationMs) by Task, Role\n| where Task != 'Task_unlabeled' and Role != 'role_unlabeled'\n| top 100 by Executions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q02", "name": "TopActions",
+      "purpose": "Top actions broken down by task and role with duration stats",
+      "appendTo": "patterns.actions",
+      "outputColumns": ["Task","Role","Action","Executions","Users","AvgDurationMs"],
+      "suffix": "\n_raw\n| summarize Executions=count(), Users=dcount(User), AvgDurationMs=avg(DurationMs) by Task, Role, Action\n| where Action != 'Action_unlabeled' and Task != 'Task_unlabeled'\n| top 200 by Executions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q03", "name": "UsersByTask",
+      "purpose": "Distinct user count per task to measure adoption breadth",
+      "appendTo": "patterns.users",
+      "outputColumns": ["Task","Role","Users","Executions"],
+      "suffix": "\n_raw\n| summarize Users=dcount(User), Executions=count() by Task, Role\n| where Task != 'Task_unlabeled'\n| top 100 by Users desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q04", "name": "RoleAdoption",
+      "purpose": "Execution volume and user count per role",
+      "appendTo": "patterns.roles",
+      "outputColumns": ["Role","Users","Executions","AvgDurationMs"],
+      "suffix": "\n_raw\n| summarize Users=dcount(User), Executions=count(), AvgDurationMs=avg(DurationMs) by Role\n| where Role != 'role_unlabeled'\n| top 50 by Executions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q05", "name": "SessionSummary",
+      "purpose": "Session-level step count and duration aggregates",
+      "appendTo": "patterns.sessions",
+      "outputColumns": ["Task","Role","Sessions","Users","AvgSteps","AvgDurationSeconds"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize StepCount=count(), Start=min(RowTs), End=max(RowTs), Users=dcount(User) by Task, Role, SessionId\n| extend DurationSeconds = datetime_diff('second', End, Start)\n| summarize Sessions=count(), Users=sum(Users), AvgSteps=avg(todouble(StepCount)), AvgDurationSeconds=avg(todouble(DurationSeconds)) by Task, Role\n| top 100 by Sessions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q06", "name": "FlowPatterns",
+      "purpose": "Most common action sequences grouped by task and role",
+      "appendTo": "patterns.flows",
+      "outputColumns": ["Task","Role","Pattern","Executions","Users","AvgSteps","AvgDurationSeconds"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize Steps=make_list(Action, 50), StepCount=count(), Start=min(RowTs), End=max(RowTs), Users=dcount(User) by Task, Role, SessionId\n| extend Pattern=strcat_array(Steps,' > '), DurationSeconds=datetime_diff('second', End, Start)\n| summarize Executions=count(), Users=dcount(SessionId), AvgSteps=avg(todouble(StepCount)), AvgDurationSeconds=avg(todouble(DurationSeconds)) by Task, Role, Pattern\n| top 100 by Executions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q07", "name": "TransitionPairs",
+      "purpose": "Most frequent action-to-action transitions within sessions",
+      "appendTo": "patterns.transitions",
+      "outputColumns": ["Task","Role","FromAction","ToAction","Transitions"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| serialize\n| extend PrevAction = prev(Action), PrevSession = prev(SessionId)\n| where SessionId == PrevSession and isnotempty(PrevAction) and PrevAction != 'Action_unlabeled' and Action != 'Action_unlabeled'\n| summarize Transitions=count() by Task, Role, FromAction=PrevAction, ToAction=Action\n| top 200 by Transitions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q08", "name": "FunnelStepPositions",
+      "purpose": "Action distribution at each step position in session funnels",
+      "appendTo": "patterns.funnel",
+      "outputColumns": ["Task","Role","StepIndex","Action","CountAtStep"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize Steps=make_list(Action, 50) by Task, Role, SessionId\n| mv-expand Action=Steps with_itemindex=StepIndex\n| summarize CountAtStep=count() by Task, Role, StepIndex, Action\n| top 300 by CountAtStep desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q09", "name": "DropOffShortSessions",
+      "purpose": "Sessions that ended after only 1-2 steps indicating drop-off",
+      "appendTo": "patterns.dropoff",
+      "outputColumns": ["Task","Role","StepCount","Sessions"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize StepCount=count() by Task, Role, SessionId\n| where StepCount <= 2\n| summarize Sessions=count() by Task, Role, StepCount\n| order by Sessions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q10", "name": "LongRunningSessions",
+      "purpose": "Longest sessions by wall-clock duration",
+      "appendTo": "patterns.longSessions",
+      "outputColumns": ["Task","Role","SessionId","User","StepCount","DurationSeconds"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize StepCount=count(), Start=min(RowTs), End=max(RowTs), AnyUser=any(User) by Task, Role, SessionId\n| extend DurationSeconds = datetime_diff('second', End, Start)\n| top 100 by DurationSeconds desc\n| project Task, Role, SessionId, User=AnyUser, StepCount, DurationSeconds",
+      "usesSorted": true
+    },
+    {
+      "id": "Q11", "name": "SlowActionsP95",
+      "purpose": "Actions with highest P95 duration indicating performance bottlenecks",
+      "appendTo": "patterns.slowActions",
+      "outputColumns": ["Task","Role","Action","P95DurationMs","AvgDurationMs","Executions"],
+      "suffix": "\n_raw\n| summarize P95DurationMs=percentile(DurationMs,95), AvgDurationMs=avg(DurationMs), Executions=count() by Task, Role, Action\n| where Executions > 10 and Action != 'Action_unlabeled'\n| top 150 by P95DurationMs desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q12", "name": "TimeBetweenSteps",
+      "purpose": "Average and P95 gap between consecutive steps per task",
+      "appendTo": "patterns.stepGaps",
+      "outputColumns": ["Task","Role","AvgGapSeconds","P95GapSeconds","Transitions"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| serialize\n| extend PrevTs = prev(RowTs), PrevSession = prev(SessionId)\n| where SessionId == PrevSession and isnotnull(PrevTs)\n| extend GapSeconds = datetime_diff('second', RowTs, PrevTs)\n| where GapSeconds >= 0 and GapSeconds < 7200\n| summarize AvgGapSeconds=avg(todouble(GapSeconds)), P95GapSeconds=percentile(GapSeconds,95), Transitions=count() by Task, Role\n| top 100 by P95GapSeconds desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q13", "name": "HourlyHeatmap",
+      "purpose": "Execution volume by hour of day for scheduling insights",
+      "appendTo": "patterns.hourly",
+      "outputColumns": ["HourOfDay","Executions","Users"],
+      "suffix": "\n_raw\n| extend HourOfDay = datetime_part('hour', RowTs)\n| summarize Executions=count(), Users=dcount(User) by HourOfDay\n| order by HourOfDay asc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q14", "name": "DailyTrendByTask",
+      "purpose": "Daily execution trend per task for adoption tracking",
+      "appendTo": "patterns.trends",
+      "outputColumns": ["Day","Task","Role","Executions","Users"],
+      "suffix": "\n_raw\n| extend Day = bin(RowTs, 1d)\n| summarize Executions=count(), Users=dcount(User) by Day, Task, Role\n| order by Day asc, Executions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q15", "name": "PowerUsers",
+      "purpose": "Top users ranked by execution count and task breadth",
+      "appendTo": "patterns.powerUsers",
+      "outputColumns": ["User","Role","Executions","DistinctTasks","DistinctActions"],
+      "suffix": "\n_raw\n| summarize Executions=count(), DistinctTasks=dcount(Task), DistinctActions=dcount(Action) by User, Role\n| where User != 'user_unlabeled'\n| top 100 by Executions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q16", "name": "EntryExit",
+      "purpose": "First and last action per task session for boundary analysis",
+      "appendTo": "patterns.entryExit",
+      "outputColumns": ["Task","Role","FirstAction","LastAction","Sessions"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize FirstAction=arg_min(RowTs, Action), LastAction=arg_max(RowTs, Action) by Task, Role, SessionId\n| project Task, Role, SessionId, FirstAction=FirstAction, LastAction=LastAction\n| summarize Sessions=count() by Task, Role, FirstAction, LastAction\n| top 200 by Sessions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q17", "name": "StepsDistribution",
+      "purpose": "Distribution of step counts per session for complexity analysis",
+      "appendTo": "patterns.stepDistribution",
+      "outputColumns": ["Task","Role","StepCount","Sessions"],
+      "suffix": "\n_raw\n| summarize StepCount=count() by Task, Role, SessionId\n| summarize Sessions=count() by Task, Role, StepCount\n| order by Sessions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q18", "name": "ActionDiversity",
+      "purpose": "Distinct action count per task measuring workflow complexity",
+      "appendTo": "patterns.diversity",
+      "outputColumns": ["Task","Role","DistinctActions","Executions"],
+      "suffix": "\n_raw\n| summarize DistinctActions=dcount(Action), Executions=count() by Task, Role\n| top 100 by DistinctActions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q19", "name": "TaskSwitching",
+      "purpose": "How many distinct tasks users touch per session (context switching)",
+      "appendTo": "patterns.taskSwitching",
+      "outputColumns": ["Role","TaskCount","Sessions"],
+      "suffix": "\n_raw\n| summarize TaskCount=dcount(Task) by Role, SessionId\n| summarize Sessions=count() by Role, TaskCount\n| order by Role asc, TaskCount asc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q20", "name": "ReworkLoops",
+      "purpose": "Repeated actions within a session indicating rework or friction",
+      "appendTo": "patterns.rework",
+      "outputColumns": ["Task","Role","Action","ReworkSessions","AvgRepeats"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize Actions=make_list(Action, 200) by Task, Role, SessionId\n| mv-expand Actions\n| summarize Repeats=count() by Task, Role, SessionId, Action=tostring(Actions)\n| where Repeats > 1\n| summarize ReworkSessions=dcount(SessionId), AvgRepeats=avg(todouble(Repeats)) by Task, Role, Action\n| top 200 by ReworkSessions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "Q21", "name": "ActionSetSize",
+      "purpose": "Number of unique actions per session measuring behavioral variety",
+      "appendTo": "patterns.actionSetSize",
+      "outputColumns": ["Role","ActionSetSize","Sessions"],
+      "suffix": "\n_raw\n| summarize ActionSet=make_set(Action, 200) by Role, SessionId\n| extend ActionSetSize = array_length(ActionSet)\n| summarize Sessions=count() by Role, ActionSetSize\n| order by Sessions desc",
+      "usesSorted": false
+    },
+    {
+      "id": "Q22", "name": "TopFlowsByRole",
+      "purpose": "Most common action flow patterns segmented by role",
+      "appendTo": "patterns.flowsByRole",
+      "outputColumns": ["Role","Pattern","Executions","AvgSteps"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize Steps=make_list(Action, 50), StepCount=count() by Role, SessionId\n| extend Pattern=strcat_array(Steps,' > ')\n| summarize Executions=count(), AvgSteps=avg(todouble(StepCount)) by Role, Pattern\n| top 100 by Executions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "E01", "name": "TopFlowsWithSamples",
+      "purpose": "Top flow patterns with sample session IDs for LLM grounding",
+      "appendTo": "evidence.flows",
+      "outputColumns": ["Task","Role","Pattern","Executions","Users","SampleSessions"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize Steps=make_list(Action, 50), StepCount=count(), AnyUser=any(User) by Task, Role, SessionId\n| extend Pattern = strcat_array(Steps, ' > ')\n| summarize Executions=count(), Users=dcount(AnyUser), SampleSessions=make_list(SessionId, 3) by Task, Role, Pattern\n| top 50 by Executions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "E02", "name": "FrictionTransitions",
+      "purpose": "Transition-level friction evidence with step gaps and repeated actions",
+      "appendTo": "evidence.friction",
+      "outputColumns": ["Task","Role","FromAction","ToAction","Transitions","AvgGapSeconds","P95GapSeconds","Repeats"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| serialize\n| extend PrevAction = prev(Action), PrevSession = prev(SessionId), PrevTs = prev(RowTs)\n| where SessionId == PrevSession and isnotempty(PrevAction) and isnotnull(PrevTs)\n| extend GapSeconds = datetime_diff('second', RowTs, PrevTs)\n| where GapSeconds >= 0 and GapSeconds < 7200\n| summarize\n    Transitions=count(),\n    AvgGapSeconds=avg(todouble(GapSeconds)),\n    P95GapSeconds=percentile(GapSeconds,95),\n    Repeats=countif(Action == PrevAction)\n  by Task, Role, FromAction=PrevAction, ToAction=Action\n| top 200 by P95GapSeconds desc",
+      "usesSorted": true
+    },
+    {
+      "id": "E03", "name": "EntryExitBoundaries",
+      "purpose": "Process boundaries (first/last action) for agent trigger placement",
+      "appendTo": "evidence.boundaries",
+      "outputColumns": ["Task","Role","FirstAction","LastAction","Sessions"],
+      "suffix": "\n_raw | sort by SessionId asc, RowTs asc\n| summarize FirstAction=arg_min(RowTs, Action), LastAction=arg_max(RowTs, Action) by Task, Role, SessionId\n| project Task, Role, SessionId, FirstAction=FirstAction, LastAction=LastAction\n| summarize Sessions=count() by Task, Role, FirstAction, LastAction\n| top 200 by Sessions desc",
+      "usesSorted": true
+    },
+    {
+      "id": "E04", "name": "RepresentativeSessionTraces",
+      "purpose": "Concrete session traces from 10 most active sessions for LLM grounding",
+      "appendTo": "evidence.traces",
+      "outputColumns": ["SessionId","RowTs","User","Role","Task","Action"],
+      "suffix": "\nlet _topSessions =\n_raw\n| summarize Steps=count() by SessionId\n| top 10 by Steps desc\n| project SessionId;\n_raw\n| where SessionId in (_topSessions)\n| sort by SessionId asc, RowTs asc\n| project SessionId, RowTs, User, Role, Task, Action",
+      "usesSorted": false,
+      "usesLetOnly": true
+    },
+    {
+      "id": "E05", "name": "RoleTaskActionSegmentation",
+      "purpose": "Role/task/action segmentation to scope per-role vs shared agents",
+      "appendTo": "evidence.segmentation",
+      "outputColumns": ["Role","Task","Action","Executions","Users"],
+      "suffix": "\n_raw\n| summarize Executions=count(), Users=dcount(User) by Role, Task, Action\n| top 500 by Executions desc",
+      "usesSorted": false
+    }
+  ],
+  "dataQualityQuery": "let _raw =\nAppEvents\n| where TimeGenerated > ago(24h)\n| where Name == 'SaaSUserAction'\n| extend JobId = tostring(Properties.JobId)\n| where JobId == '{{JOBID}}'\n| extend\n    RowTs = todatetime(tostring(Properties.RowTimestamp)),\n    User = tostring(Properties.User),\n    Role = tostring(Properties.Role),\n    Task = tostring(Properties.Task),\n    Action = tostring(Properties.Action);\n_raw\n| summarize Total=count(),\n    UserUnlabeled=countif(User == 'user_unlabeled' or isempty(User)),\n    RoleUnlabeled=countif(Role == 'role_unlabeled' or isempty(Role)),\n    TaskUnlabeled=countif(Task == 'Task_unlabeled' or isempty(Task)),\n    ActionUnlabeled=countif(Action == 'Action_unlabeled' or isempty(Action))\n| project Field='User', UnlabeledCount=UserUnlabeled, Total=Total, UnlabeledPct=toreal(UserUnlabeled)*100.0/Total\n| union (\n    _raw\n    | summarize Total=count(), RoleUnlabeled=countif(Role == 'role_unlabeled' or isempty(Role))\n    | project Field='Role', UnlabeledCount=RoleUnlabeled, Total=Total, UnlabeledPct=toreal(RoleUnlabeled)*100.0/Total\n)\n| union (\n    _raw\n    | summarize Total=count(), TaskUnlabeled=countif(Task == 'Task_unlabeled' or isempty(Task))\n    | project Field='Task', UnlabeledCount=TaskUnlabeled, Total=Total, UnlabeledPct=toreal(TaskUnlabeled)*100.0/Total\n)\n| union (\n    _raw\n    | summarize Total=count(), ActionUnlabeled=countif(Action == 'Action_unlabeled' or isempty(Action))\n    | project Field='Action', UnlabeledCount=ActionUnlabeled, Total=Total, UnlabeledPct=toreal(ActionUnlabeled)*100.0/Total\n)\n| order by UnlabeledPct desc"
+}

@@ -1,0 +1,609 @@
+﻿@page
+@model Flywheel.Pages.FromSaaSLogs.IndexModel
+@{
+    ViewData["Title"] = "From SaaS Logs";
+}
+
+@section PageHeader {
+    <div class="page-header page-header-light shadow">
+        <div class="page-header-content d-flex align-items-center justify-content-between">
+            <div class="page-title">
+                <h4 class="mb-0">AI Use Cases Insights</h4>
+                <div class="text-muted small">Wizard: Upload logs → Process evidence → Generate use cases → Review</div>
+            </div>
+
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="javascript:void(0);">Design</a></li>
+                <li class="breadcrumb-item active" aria-current="page">From Logs (Wizard)</li>
+            </ol>
+        </div>
+    </div>
+}
+
+@section Styles {
+    <style>
+        .generated-html * {
+            color: var(--body-color, #1F2937) !important;
+        }
+
+        .wizard-card {
+            overflow: hidden;
+            border-radius: var(--border-radius-lg, .5rem);
+            box-shadow: var(--box-shadow, 0px 1px 3px rgba(0,0,0,.125));
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .result-block {
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: var(--border-radius-lg, .5rem);
+            padding: var(--spacer, 1.25rem);
+            margin-bottom: var(--spacer, 1.25rem);
+            background: #4b4b4b !important;
+        }
+        .text-muted {
+            color: #4b4b4b !important;
+        }
+        .result-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: .5rem;
+        }
+
+            .result-title h6 {
+                margin: 0;
+            }
+
+        .result-meta {
+            font-size: .85rem;
+            color: var(--gray-600, #6B7280);
+        }
+
+        .progress {
+            height: 22px;
+            border-radius: var(--border-radius-pill, 50rem);
+            overflow: hidden;
+        }
+
+        .processing-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0,0,0,.2);
+            border-top-color: rgba(0,0,0,.6);
+            border-radius: 50%;
+            display: inline-block;
+            animation: spin 0.9s linear infinite;
+            vertical-align: -2px;
+            margin-right: 8px;
+        }
+       
+        .stage-list li {
+            margin-bottom: .35rem;
+        }
+
+        .stage-done {
+            color: #0f5132;
+        }
+
+        .stage-wait {
+            color: #6B7280;
+        }
+
+        .stage-run {
+            color: #084298;
+            font-weight: 600;
+        }
+
+        .artifacts-box {
+            max-height: 180px;
+            overflow: auto;
+        }
+
+        .cta-row {
+            display: flex;
+            gap: .75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card wizard-card">
+            <div class="card-header">
+                <h6 class="mb-0">Generate Agent Insights from SaaS Logs</h6>
+            </div>
+
+            <form id="agentWizard" class="wizard wizard-form steps-starting-step" action="#" novalidate>
+
+                <!-- STEP 1 -->
+                <h6>Upload & Initialize</h6>
+                <fieldset>
+                    <div class="row">
+                        <div class="col-lg-7">
+                            <div class="mb-3">
+                                <label class="form-label">Upload log file (.csv)</label>
+                                <input type="file" id="fileInput" name="fileInput" class="form-control" accept=".csv" />
+                            </div>
+
+                            <div class="progress mb-2">
+                                <div id="uploadBar" class="progress-bar" role="progressbar" style="width:0%">0%</div>
+                            </div>
+
+                            <small id="uploadLabel" class="text-muted">Choose a file to start.</small>
+
+                            <div class="cta-row mt-3">
+                                <button id="btnUpload" type="button" class="btn btn-primary">
+                                    Upload &amp; Initialize
+                                </button>
+                                <button id="btnResetUpload" type="button" class="btn btn-light">
+                                    Reset
+                                </button>
+                            </div>
+
+                            <input type="hidden" id="jobId" />
+                            <input type="hidden" id="blobName" />
+
+                            <!-- Background processing status -->
+                            <div id="processingPanel" class="alert alert-info mt-3 hidden">
+                                <div class="d-flex align-items-center">
+                                    <span class="processing-spinner"></span>
+                                    <div>
+                                        <div><strong>Processing in the background…</strong></div>
+                                        <div class="small text-muted">
+                                            We are extracting evidence (KQL patterns + representative traces). This page will update automatically.
+                                            <span id="elapsedText"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-2" />
+
+                                <ul class="stage-list mb-2" style="padding-left: 1.25rem;">
+                                    <li id="st1" class="stage-wait">1) Upload file to Blob</li>
+                                    <li id="st2" class="stage-wait">2) Enqueue processing job</li>
+                                    <li id="st3" class="stage-wait">3) Generate evidence artifacts (E01–E05 + patterns)</li>
+                                    <li id="st4" class="stage-wait">4) Ready to generate use cases</li>
+                                </ul>
+
+                                <div id="artifactsBox" class="alert alert-light border artifacts-box hidden mb-0">
+                                    <div class="result-meta"><strong>Artifacts ready</strong></div>
+                                    <ul id="artifactsList" class="mb-0"></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-5">
+                            <div class="alert alert-info mb-0">
+                                <strong>What happens next?</strong>
+                                <div class="mt-2">
+                                    After upload, the backend processes your logs and generates “evidence artifacts”.
+                                    When they’re ready, you’ll be taken to the next step where you can generate use cases.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- STEP 2 -->
+                <h6>Generate Use Cases</h6>
+                <fieldset>
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="alert alert-success">
+                                <strong>Next step:</strong> Click the button below to generate <u>Discovery Cards</u> and <u>Architecture</u> from the evidence.
+                            </div>
+
+                            <div class="cta-row mb-3">
+                                <button type="button" id="btnGenerate" class="btn btn-success" disabled>
+                                    Generate Use Cases (Discovery Cards + Architecture)
+                                </button>
+                                <button type="button" id="btnClear" class="btn btn-light">
+                                    Clear Results
+                                </button>
+                            </div>
+
+                            <div class="progress mb-2">
+                                <div id="runProgressBar" class="progress-bar" role="progressbar" style="width:0%"></div>
+                            </div>
+                            <div id="runProgressText" class="small text-muted">Idle</div>
+
+                            <div id="runLog" class="alert alert-light border mt-2" style="max-height:220px; overflow:auto;">
+                                <div class="result-meta">Run log will appear here…</div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="alert alert-warning mb-0">
+                                <strong>Note:</strong> The Generate button stays disabled until background processing finishes.
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- STEP 3 -->
+                <h6>Review</h6>
+                <fieldset>
+                    <div id="resultsContainer">
+                        <div id="res-GenerateUseCases" class="result-block hidden">
+                            <div class="result-title">
+                                <h6>Use Case Suggestions + Architecture</h6>
+                                <span class="result-meta" id="meta-GenerateUseCases"></span>
+                            </div>
+                            <div class="generated-html" id="content-GenerateUseCases"></div>
+                        </div>
+
+                        <div id="noResultsHint" class="alert alert-light border">
+                            No results yet. Go back to <strong>Generate Use Cases</strong> and click the green button.
+                        </div>
+                    </div>
+                </fieldset>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- jQuery must already be loaded in _Layout -->
+    <script src="~/js/vendor/forms/wizards/steps.min.js"></script>
+
+    <script>
+        const endpoints = {
+            CreateUploadSas: '/FromSaaSLogs/CreateUploadSas',
+            EnqueueJob: '/FromSaaSLogs/EnqueueJob',
+            JobStatus: '/FromSaaSLogs/JobStatus',
+            GenerateUseCases: '/FromSaaSLogs/GenerateUseCases'
+        };
+
+        let uploadSucceeded = false;
+        let pollTimer = null;
+        let processingStart = null;
+
+        function logLine(text) {
+            const runLog = document.getElementById('runLog');
+            const div = document.createElement('div');
+            div.textContent = text;
+            runLog.appendChild(div);
+            runLog.scrollTop = runLog.scrollHeight;
+        }
+
+        function setRunProgress(pct, text) {
+            const bar = document.getElementById('runProgressBar');
+            const label = document.getElementById('runProgressText');
+            bar.style.width = pct + '%';
+            label.textContent = text || '';
+        }
+
+        function setUploadProgress(pct, bytesSent, totalBytes) {
+            const bar = document.getElementById('uploadBar');
+            const label = document.getElementById('uploadLabel');
+
+            bar.style.width = pct + '%';
+            bar.textContent = pct + '%';
+
+            const mb = (n) => (n / (1024 * 1024)).toFixed(1);
+            label.textContent = `Uploading... ${mb(bytesSent)} MB / ${mb(totalBytes)} MB`;
+        }
+
+        function setStage(id, state) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('stage-wait','stage-run','stage-done');
+            el.classList.add(state);
+        }
+
+        function showArtifacts(list) {
+            const box = document.getElementById('artifactsBox');
+            const ul = document.getElementById('artifactsList');
+            if (!box || !ul) return;
+
+            ul.innerHTML = '';
+            for (const a of list || []) {
+                const li = document.createElement('li');
+                li.textContent = a.name ?? a;
+                ul.appendChild(li);
+            }
+            box.classList.remove('hidden');
+        }
+
+        function showResultSection(key, html) {
+            const block = document.getElementById('res-' + key);
+            const content = document.getElementById('content-' + key);
+            const meta = document.getElementById('meta-' + key);
+
+            if (block && content) {
+                block.classList.remove('hidden');
+                content.innerHTML = html || '<p>No content returned.</p>';
+                if (meta) meta.textContent = 'Updated ' + new Date().toLocaleString();
+            }
+            document.getElementById('noResultsHint')?.classList.add('hidden');
+        }
+
+        function clearResults() {
+            document.getElementById('res-GenerateUseCases')?.classList.add('hidden');
+            const c = document.getElementById('content-GenerateUseCases');
+            if (c) c.innerHTML = '';
+            const m = document.getElementById('meta-GenerateUseCases');
+            if (m) m.textContent = '';
+            document.getElementById('noResultsHint')?.classList.remove('hidden');
+
+            const runLog = document.getElementById('runLog');
+            runLog.innerHTML = '<div class="result-meta">Run log will appear here…</div>';
+            setRunProgress(0, 'Idle');
+        }
+
+        async function createSas(fileName) {
+            const form = new FormData();
+            form.append('fileName', fileName);
+
+            const res = await fetch(endpoints.CreateUploadSas, { method: 'POST', body: form });
+            const text = await res.text();
+            if (!res.ok) throw new Error(text || 'Failed to create SAS');
+            return JSON.parse(text);
+        }
+
+        async function uploadToSasUrl(uploadUrl, file) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', uploadUrl);
+                xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
+
+                xhr.upload.onprogress = (e) => {
+                    if (!e.lengthComputable) return;
+                    const pct = Math.floor((e.loaded / e.total) * 100);
+                    setUploadProgress(pct, e.loaded, e.total);
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve();
+                    else reject(new Error('Upload failed: ' + xhr.status + ' ' + xhr.responseText));
+                };
+
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.send(file);
+            });
+        }
+
+        async function enqueueJob(jobId, blobName, originalFileName) {
+            const res = await fetch(endpoints.EnqueueJob, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobId, blobName, originalFileName, uploadedAt: new Date().toISOString() })
+            });
+
+            const text = await res.text();
+            if (!res.ok) throw new Error(text || 'Failed to enqueue job');
+            return text ? JSON.parse(text) : { ok: true };
+        }
+
+        async function fetchJobStatus(jobId) {
+            const res = await fetch(endpoints.JobStatus + '?jobId=' + encodeURIComponent(jobId));
+            if (!res.ok) throw new Error('JobStatus failed: ' + res.status);
+            return await res.json();
+        }
+
+        function startProcessingUI() {
+            processingStart = new Date();
+            document.getElementById('processingPanel')?.classList.remove('hidden');
+
+            setStage('st1', 'stage-run');
+            setStage('st2', 'stage-wait');
+            setStage('st3', 'stage-wait');
+            setStage('st4', 'stage-wait');
+
+            // elapsed time label
+            const tick = () => {
+                const el = document.getElementById('elapsedText');
+                if (!el || !processingStart) return;
+                const secs = Math.floor((new Date() - processingStart) / 1000);
+                el.textContent = ` · Elapsed: ${secs}s`;
+            };
+            tick();
+            setInterval(tick, 1000);
+        }
+
+        async function pollUntilReady(jobId) {
+            // show that background work is happening
+            startProcessingUI();
+            setStage('st1', 'stage-done');
+            setStage('st2', 'stage-run');
+
+            // Poll every 2s; update stages based on status
+            while (true) {
+                const data = await fetchJobStatus(jobId);
+
+                // As soon as we have artifacts, we know step 3 started/finished.
+                if (data.status === 'failed') {
+                    setStage('st2', 'stage-done');
+                    setStage('st3', 'stage-run');
+                    throw new Error('Processing failed. Check patterns.ERROR.txt in patterns container.');
+                }
+
+                if (data.status === 'processing') {
+                    setStage('st2', 'stage-done');
+                    setStage('st3', 'stage-run');
+                }
+
+                if (data.status === 'ready') {
+                    setStage('st2', 'stage-done');
+                    setStage('st3', 'stage-done');
+                    setStage('st4', 'stage-done');
+
+                    showArtifacts(data.artifacts || []);
+                    return data;
+                }
+
+                await new Promise(r => setTimeout(r, 2000));
+            }
+        }
+
+        async function generateUseCases() {
+            const jobId = document.getElementById('jobId').value;
+            if (!jobId) {
+                logLine('❌ No jobId. Upload first.');
+                return;
+            }
+
+            setRunProgress(10, 'Calling GenerateUseCases…');
+            logLine('⏳ GenerateUseCases…');
+
+            const resp = await fetch(endpoints.GenerateUseCases, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ jobId })
+            });
+
+            const text = await resp.text();
+            if (!resp.ok) {
+                setRunProgress(0, 'Idle');
+                throw new Error(text || ('GenerateUseCases failed: ' + resp.status));
+            }
+
+            // Extract inner HTML if response contains .generated-html wrapper
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+            const content = doc.querySelector('.generated-html');
+
+            showResultSection('GenerateUseCases', content ? content.innerHTML : text);
+
+            setRunProgress(100, 'Done');
+            logLine('✅ GenerateUseCases done');
+
+            $('#agentWizard').steps('next');
+        }
+
+        $(function () {
+            if (!$.fn.steps) {
+                console.warn('jQuery Steps plugin not loaded (steps.min.js missing or blocked).');
+                return;
+            }
+
+            // Wizard with 3 steps
+            $('#agentWizard').steps({
+                headerTag: 'h6',
+                bodyTag: 'fieldset',
+                transitionEffect: 'fade',
+                autoFocus: true,
+                enableAllSteps: false,
+                enablePagination: true,
+                enableFinishButton: false,
+                enableCancelButton: false,
+                onStepChanging: function (event, currentIndex, newIndex) {
+                    if (newIndex < currentIndex) return true;
+
+                    // Prevent leaving Upload step until upload & processing is ready
+                    if (currentIndex === 0 && newIndex > 0) {
+                        const input = document.getElementById('fileInput');
+                        if (!input || !input.files || input.files.length === 0) {
+                            document.getElementById('uploadLabel').textContent = 'Please select a CSV first.';
+                            return false;
+                        }
+                        if (!uploadSucceeded) {
+                            document.getElementById('uploadLabel').textContent = 'Please click “Upload & Initialize” and wait until processing is ready.';
+                            return false;
+                        }
+                    }
+
+                    // Prevent leaving Generate step if no output yet
+                    if (currentIndex === 1 && newIndex > 1) {
+                        const block = document.getElementById('res-GenerateUseCases');
+                        if (block && block.classList.contains('hidden')) return false;
+                    }
+
+                    return true;
+                }
+            });
+
+            // Disable generate until ready
+            document.getElementById('btnGenerate').disabled = true;
+
+            document.getElementById('btnUpload')?.addEventListener('click', async (e) => {
+                e.preventDefault();
+
+                const label = document.getElementById('uploadLabel');
+                uploadSucceeded = false;
+                document.getElementById('btnGenerate').disabled = true;
+
+                try {
+                    const input = document.getElementById('fileInput');
+                    if (!input || !input.files || input.files.length === 0) {
+                        label.textContent = 'Please select a CSV first.';
+                        return;
+                    }
+
+                    const file = input.files[0];
+                    setUploadProgress(0, 0, file.size);
+                    label.textContent = 'Requesting upload URL…';
+
+                    const sas = await createSas(file.name);
+
+                    document.getElementById('jobId').value = sas.jobId;
+                    document.getElementById('blobName').value = sas.blobName;
+
+                    label.textContent = 'Uploading to Blob…';
+                    await uploadToSasUrl(sas.uploadUrl, file);
+
+                    label.textContent = 'Enqueuing processing job…';
+                    await enqueueJob(sas.jobId, sas.blobName, file.name);
+
+                    label.textContent = 'Processing… (this continues in the background)';
+                    const status = await pollUntilReady(sas.jobId);
+
+                    uploadSucceeded = true;
+                    label.textContent = '✅ Upload complete. Evidence artifacts are ready.';
+                    document.getElementById('btnGenerate').disabled = false;
+
+                    // Move user to Generate step immediately so next action is obvious
+                    $('#agentWizard').steps('next');
+                }
+                catch (err) {
+                    console.error(err);
+                    label.textContent = '❌ Upload failed: ' + (err?.message || err);
+                }
+            });
+
+            document.getElementById('btnResetUpload')?.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                uploadSucceeded = false;
+                document.getElementById('fileInput').value = '';
+                document.getElementById('jobId').value = '';
+                document.getElementById('blobName').value = '';
+
+                const bar = document.getElementById('uploadBar');
+                bar.style.width = '0%';
+                bar.textContent = '0%';
+                document.getElementById('uploadLabel').textContent = 'Choose a file to start.';
+
+                document.getElementById('processingPanel')?.classList.add('hidden');
+                document.getElementById('artifactsBox')?.classList.add('hidden');
+                document.getElementById('btnGenerate').disabled = true;
+
+                clearResults();
+                setRunProgress(0, 'Idle');
+            });
+
+            document.getElementById('btnGenerate')?.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                    setRunProgress(0, 'Starting…');
+                    await generateUseCases();
+                } catch (err) {
+                    console.error(err);
+                    logLine('❌ ' + (err?.message || err));
+                    setRunProgress(0, 'Idle');
+                }
+            });
+
+            document.getElementById('btnClear')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                clearResults();
+            });
+        });
+    </script>
+}

@@ -1,0 +1,113 @@
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-color-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>@ViewData["Title"] - Flywheel</title>
+
+    <link href="~/css/bootstrap.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/components.min.css" rel="stylesheet" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/flywheel.css" asp-append-version="true" />
+    <link href="~/css/flywheel.dark.css" rel="stylesheet" asp-append-version="true" />
+    <link rel="stylesheet" href="~/icons/phosphor/styles.min.css" asp-append-version="true" />
+    <link href="~/fonts/inter/inter.css" rel="stylesheet" />
+    <link href="~/css/flywheel.typography.css" rel="stylesheet" />
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+
+<body>
+    <div class="page-content">
+
+        <div class="sidebar sidebar-dark sidebar-main sidebar-expand-lg">
+            <div class="sidebar-section bg-black bg-opacity-10 border-bottom border-bottom-white border-opacity-10">
+                <div class="sidebar-logo d-flex justify-content-center align-items-center">
+                    <a asp-page="/Index" class="d-inline-flex align-items-center py-2">
+                        <img src="~/images/toggle-white.png" class="sidebar-logo-icon" alt="Flywheel" />
+                        <img src="~/images/desktop-white.png" class="sidebar-resize-hide ms-3" height="25" alt="Flywheel" />
+                    </a>
+                    <div class="sidebar-resize-hide ms-auto">
+                        <button type="button" class="btn btn-flat-white btn-icon btn-sm rounded-pill border-transparent sidebar-control sidebar-main-resize d-none d-lg-inline-flex">
+                            <i class="ph-arrows-left-right" style="color: white !important;"></i>
+                        </button>
+                        <button type="button" class="btn btn-flat-white btn-icon btn-sm rounded-pill border-transparent sidebar-mobile-main-toggle d-lg-none">
+                            <i class="ph-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <ul class="nav nav-sidebar" data-nav-type="accordion">
+                        <li class="nav-item-header">
+                            <div class="text-uppercase fs-sm lh-sm opacity-50 sidebar-resize-hide">Navigation</div>
+                            <i class="ph-dots-three sidebar-resize-show"></i>
+                        </li>
+                        <li class="nav-item">
+                            <a asp-page="/Index" class="nav-link">
+                                <i class="ph-house"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item-header">
+                            <div class="text-uppercase fs-sm lh-sm opacity-50 sidebar-resize-hide">Intelligence</div>
+                            <i class="ph-dots-three sidebar-resize-show"></i>
+                        </li>
+                        <li class="nav-item nav-item-submenu nav-item-expanded nav-item-open">
+                            <a href="#" class="nav-link">
+                                <i class="ph-brain"></i>
+                                <span>Log Analysis</span>
+                            </a>
+                            <ul class="nav-group-sub collapse show">
+                                <li class="nav-item">
+                                    <a href="@Url.Content("/FromSaaSLogs/Index")" class="nav-link">
+                                        <i class="ph-upload-simple me-2"></i>
+                                        Upload &amp; Analyze
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+            <div class="navbar navbar-expand-lg navbar-static shadow">
+                <div class="container-fluid">
+                    <div class="d-flex d-lg-none">
+                        <button type="button" class="navbar-toggler sidebar-mobile-main-toggle rounded">
+                            <i class="ph-list"></i>
+                        </button>
+                    </div>
+                    <div class="d-flex align-items-center ms-auto">
+                        <span class="fw-semibold opacity-75 d-none d-lg-inline-block">Flywheel</span>
+                    </div>
+                </div>
+            </div>
+
+            @await RenderSectionAsync("PageHeader", required: false)
+
+            <div class="content-inner">
+                <div class="content">
+                    @RenderBody()
+                </div>
+                <div class="navbar navbar-sm navbar-footer border-top mt-auto">
+                    <div class="container-fluid">
+                        <span>&copy; @DateTime.UtcNow.Year Flywheel &mdash; SaaS Log Intelligence</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/flywheel.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

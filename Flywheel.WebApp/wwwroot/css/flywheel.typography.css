@@ -1,0 +1,92 @@
+/* aiapp.typography.patch.css
+   Fixes typography so sidebar matches Limitless look.
+   Load AFTER: bootstrap.min.css, aiapp.full.css, aiapp.theme.css, aiapp.sidebar.patch.css
+*/
+
+/* Ensure Bootstrap uses the same sans font as the Limitless theme variables */
+:root {
+  --bs-font-sans-serif: var(--font-sans-serif);
+}
+
+html, body {
+  font-family: var(--font-sans-serif);
+  font-size: var(--body-font-size);
+  font-weight: var(--body-font-weight);
+  line-height: var(--body-line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sidebar typography */
+.sidebar,
+.sidebar * {
+  font-family: var(--font-sans-serif);
+}
+
+/* Section headers (MAIN/LAYOUT) */
+.sidebar-dark .nav-item-header {
+  font-weight: 700;
+}
+
+/* Menu item label */
+.sidebar-dark .nav-sidebar .nav-link > span {
+  font-weight: 200;
+}
+
+/* Submenu label */
+.sidebar-dark .nav-group-sub .nav-link > span {
+  font-weight: 200;
+  opacity: 0.95;
+}
+
+/* Optional: slightly smaller submenu text for visual hierarchy */
+.sidebar-dark .nav-group-sub .nav-link > span {
+  font-size: 0.82rem;
+}
+
+/* Optional: increase main items a touch */
+.sidebar-dark .nav-sidebar > .nav-item > .nav-link > span {
+  font-size: 0.88rem;
+}
+
+/* aiapp.sidebar.colorfix.css
+   Sidebar menu color: white, with subtle active/hover background
+   Load LAST after all other sidebar/theme patches
+*/
+
+/* Sidebar menu items: white text */
+.sidebar-dark .nav-sidebar .nav-link {
+    color: rgba(255,255,255,0.92) !important;
+    font-weight: 200 !important;
+    transition: background 0.18s, color 0.18s;
+}
+
+    /* Sidebar menu items: hover/active background */
+    .sidebar-dark .nav-sidebar .nav-link:hover,
+    .sidebar-dark .nav-sidebar .nav-link:focus {
+        color: #fff !important;
+        background: rgba(255,255,255,0.08) !important;
+    }
+
+    /* Sidebar menu items: active state */
+    .sidebar-dark .nav-sidebar .nav-link.active {
+        color: #fff !important;
+        background: rgba(255,255,255,0.14) !important;
+        box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
+    }
+
+/* Submenu items: slightly lighter */
+.sidebar-dark .nav-group-sub .nav-link {
+    color: rgba(255,255,255,0.85) !important;
+    font-weight: 200;
+    background: none !important;
+}
+
+/* Remove blue from icons in sidebar */
+.sidebar-dark .nav-sidebar .nav-link > i {
+    color: #fff !important;
+    opacity: 0.92;
+}
+
+
+

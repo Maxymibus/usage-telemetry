@@ -1,0 +1,48 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstats
+.vs/
+*.DotSettings.user
+
+## NuGet
+[Pp]ackages/
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+
+## Publish profiles & service dependencies
+**/Properties/PublishProfiles/
+**/Properties/ServiceDependencies/
+**/Properties/serviceDependencies*.json*
+
+## User secrets (keep the ID in .csproj, but not the actual secrets)
+secrets.json
+
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+## Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## IDE
+.idea/
+*.swp
+*.swo
+*~
+
+## Application secrets — NEVER commit these
+appsettings.Development.json
+appsettings.*.local.json
+
+## Upload artifacts (runtime data)
+**/wwwroot/Uploads/*.csv
+**/wwwroot/Uploads/*.pdf

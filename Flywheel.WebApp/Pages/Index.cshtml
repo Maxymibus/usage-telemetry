@@ -1,0 +1,55 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+@section PageHeader {
+    <div class="page-header page-header-light shadow">
+        <div class="page-header-content d-flex align-items-center">
+            <div class="page-title">
+                <h4 class="mb-0">Flywheel Dashboard</h4>
+                <div class="text-muted small">SaaS Log Intelligence &amp; Agent Architecture</div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Get Started</h6>
+            </div>
+            <div class="card-body">
+                <p>
+                    <strong>Flywheel</strong> transforms raw SaaS usage logs into actionable
+                    AI agent architecture recommendations. Upload your logs and let the system
+                    extract behavioral patterns, identify automation opportunities, and design
+                    agent architectures grounded in real usage evidence.
+                </p>
+                <div class="d-flex gap-2">
+                    <a href="/FromSaaSLogs/Index" class="btn btn-primary">
+                        <i class="ph-upload-simple me-2"></i>Upload SaaS Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Pipeline</h6>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-2">Upload CSV logs from any SaaS system</li>
+                    <li class="mb-2">Background KQL evidence extraction (22+ queries)</li>
+                    <li class="mb-2">Azure OpenAI generates Discovery Cards</li>
+                    <li>Review agent architecture recommendations</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
