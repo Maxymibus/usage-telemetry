@@ -12,6 +12,7 @@ public interface IChatService
     Task<string> CompleteChatAsync(List<ChatMessageDto> history, float temperature = 1.0f);
     Task<string> RunDiscoveryPassAsync(object evidenceBundle, string groundingContext);
     Task<string> RunArchitecturePassAsync(object evidenceBundle, string discoveryHtml);
+    Task<string> RunImplementationPassAsync(string discoveryHtml, string learnContext);
 }
 
 public sealed class AzureOpenAIChatService : IChatService
@@ -55,7 +56,6 @@ public sealed class AzureOpenAIChatService : IChatService
         parts.Add(Prompts.DiscoveryUserPrompt);
 
         var user = new UserChatMessage(string.Join("\n\n", parts));
-
         var response = await _chatClient.CompleteChatAsync(
             [system, user],
             new ChatCompletionOptions { Temperature = 0.7f, TopP = 1.0f });
@@ -76,13 +76,32 @@ public sealed class AzureOpenAIChatService : IChatService
         };
 
         var user = new UserChatMessage(string.Join("\n\n", parts));
-
         var response = await _chatClient.CompleteChatAsync(
             [system, user],
             new ChatCompletionOptions { Temperature = 0.3f, TopP = 1.0f });
 
         return response.Value.Content.FirstOrDefault()?.Text
                ?? "<div class='generated-html'><p>No architecture results.</p></div>";
+    }
+
+    public async Task<string> RunImplementationPassAsync(string discoveryHtml, string learnContext)
+    {
+        var system = new SystemChatMessage(Prompts.ImplementationSystemPrompt);
+
+        var parts = new List<string>
+        {
+            $"DISCOVERY CARDS (reference agents by name):\n{discoveryHtml}",
+            $"MICROSOFT LEARN DOCUMENTATION (retrieved via MCP):\n{learnContext}",
+            Prompts.ImplementationUserPrompt
+        };
+
+        var user = new UserChatMessage(string.Join("\n\n", parts));
+        var response = await _chatClient.CompleteChatAsync(
+            [system, user],
+            new ChatCompletionOptions { Temperature = 0.3f, TopP = 1.0f });
+
+        return response.Value.Content.FirstOrDefault()?.Text
+               ?? "<div class='generated-html'><p>No implementation results.</p></div>";
     }
 
     private static ChatMessage ToChatMessage(ChatMessageDto dto) => dto.Role switch

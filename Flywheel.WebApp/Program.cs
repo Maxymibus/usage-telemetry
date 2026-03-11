@@ -10,6 +10,7 @@ builder.Services.Configure<AzureSearchOptions>(builder.Configuration.GetSection(
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IStorageService, StorageService>();
 builder.Services.AddSingleton<ISearchService, SearchService>();
+builder.Services.AddSingleton<ILearnMcpService, LearnMcpService>();
 builder.Services.AddSingleton<IChatService, AzureOpenAIChatService>();
 
 builder.Services.AddRazorPages();

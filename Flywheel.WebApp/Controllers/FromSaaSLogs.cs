@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using CsvHelper;
 using Microsoft.AspNetCore.Mvc;
 using UglyToad.PdfPig;
@@ -10,12 +11,13 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 namespace Flywheel.Controllers;
 
 [Route("[controller]")]
-public sealed class FromSaaSLogsController : Controller
+public sealed partial class FromSaaSLogsController : Controller
 {
     private readonly IWebHostEnvironment _env;
     private readonly IStorageService _storage;
     private readonly IChatService _chat;
     private readonly ISearchService _search;
+    private readonly ILearnMcpService _learn;
 
     private const string SessionChatKey = "ChatHistoryDtos";
     private const string SessionFilesKey = "UploadedFiles";
@@ -27,12 +29,14 @@ public sealed class FromSaaSLogsController : Controller
         IWebHostEnvironment env,
         IStorageService storage,
         IChatService chat,
-        ISearchService search)
+        ISearchService search,
+        ILearnMcpService learn)
     {
         _env = env;
         _storage = storage;
         _chat = chat;
         _search = search;
+        _learn = learn;
     }
 
     [HttpPost("CreateUploadSas")]
@@ -147,55 +151,170 @@ public sealed class FromSaaSLogsController : Controller
 
         var architectureHtml = await _chat.RunArchitecturePassAsync(evidence, discoveryHtml);
 
-        var combined = $"""
-            <div class='generated-html'>
-                <style>
-                    .pass-header {{
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                        padding: 12px 16px;
-                        margin: 24px 0 16px 0;
-                        border-radius: 8px;
-                        font-size: 1.1em;
-                        font-weight: 600;
-                    }}
-                    .pass-discovery {{
-                        background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
-                        color: #7dd3fc;
-                        border: 1px solid #38bdf8;
-                    }}
-                    .pass-architecture {{
-                        background: linear-gradient(135deg, #1a2e05 0%, #2d4a0a 100%);
-                        color: #86efac;
-                        border: 1px solid #4ade80;
-                    }}
-                    .pass-tag {{
-                        font-size: 0.7em;
-                        padding: 2px 8px;
-                        border-radius: 4px;
-                        text-transform: uppercase;
-                        letter-spacing: 0.05em;
-                    }}
-                    .tag-rag {{ background: #0c4a6e; color: #7dd3fc; }}
-                    .tag-precise {{ background: #14532d; color: #86efac; }}
-                </style>
+        var implementationHtml = "";
+        if (_learn.IsEnabled)
+        {
+            var learnContext = await GatherLearnContextAsync(discoveryHtml);
+            if (!string.IsNullOrWhiteSpace(learnContext))
+                implementationHtml = await _chat.RunImplementationPassAsync(discoveryHtml, learnContext);
+        }
 
-                <div class="pass-header pass-discovery">
-                    <span>Pass 1: Discovery &amp; Opportunity Clustering</span>
-                    <span class="pass-tag tag-rag">RAG-Grounded</span>
-                </div>
-                {discoveryHtml}
-
-                <div class="pass-header pass-architecture">
-                    <span>Pass 2: Production Architecture &amp; Hardening</span>
-                    <span class="pass-tag tag-precise">Evidence-Precise</span>
-                </div>
-                {architectureHtml}
-            </div>
-            """;
-
+        var combined = BuildCombinedOutput(discoveryHtml, architectureHtml, implementationHtml);
         return Content(combined, "text/html");
+    }
+
+    private async Task<string> GatherLearnContextAsync(string discoveryHtml)
+    {
+        var agentNames = ExtractAgentNames(discoveryHtml);
+        var sb = new StringBuilder();
+
+        var searchQueries = new List<string>
+        {
+            "Dynamics 365 Sales Copilot agent automation",
+            "Dynamics 365 AI agent capabilities features",
+            "Power Platform Copilot Studio agent builder",
+            "Azure AI Foundry agent service"
+        };
+
+        foreach (var agent in agentNames.Take(6))
+        {
+            searchQueries.Add($"Dynamics 365 {agent} automation agent");
+        }
+
+        foreach (var query in searchQueries)
+        {
+            try
+            {
+                var results = await _learn.SearchDocsAsync(query);
+                foreach (var r in results.Take(3))
+                {
+                    sb.AppendLine($"### {r.Title}");
+                    sb.AppendLine($"URL: {r.Url}");
+                    sb.AppendLine(r.Snippet);
+                    sb.AppendLine();
+                }
+            }
+            catch { }
+        }
+
+        if (agentNames.Count > 0)
+        {
+            try
+            {
+                var codeResults = await _learn.SearchCodeSamplesAsync(
+                    $"Dynamics 365 agent {agentNames.First()} automation", "csharp");
+                foreach (var r in codeResults.Take(3))
+                {
+                    sb.AppendLine($"### Code Sample: {r.Title}");
+                    sb.AppendLine($"URL: {r.Url}");
+                    sb.AppendLine(r.Snippet);
+                    sb.AppendLine();
+                }
+            }
+            catch { }
+        }
+
+        return sb.ToString();
+    }
+
+    private static List<string> ExtractAgentNames(string html)
+    {
+        var names = new List<string>();
+
+        var h3Matches = AgentNameH3Regex().Matches(html);
+        foreach (Match m in h3Matches)
+            names.Add(m.Groups[1].Value.Trim());
+
+        var strongMatches = AgentNameStrongRegex().Matches(html);
+        foreach (Match m in strongMatches)
+        {
+            var name = m.Groups[1].Value.Trim();
+            if (name.Length > 5 && name.Length < 80 && !names.Contains(name, StringComparer.OrdinalIgnoreCase))
+                names.Add(name);
+        }
+
+        return names.Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToList();
+    }
+
+    [GeneratedRegex(@"<h3[^>]*>([^<]+)</h3>", RegexOptions.IgnoreCase)]
+    private static partial Regex AgentNameH3Regex();
+
+    [GeneratedRegex(@"<strong>([^<]{5,80})</strong>", RegexOptions.IgnoreCase)]
+    private static partial Regex AgentNameStrongRegex();
+
+    private static string BuildCombinedOutput(string discoveryHtml, string architectureHtml, string implementationHtml)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("<div class='generated-html'>");
+        sb.AppendLine("""
+            <style>
+                .pass-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 12px 16px;
+                    margin: 24px 0 16px 0;
+                    border-radius: 8px;
+                    font-size: 1.1em;
+                    font-weight: 600;
+                }
+                .pass-discovery {
+                    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+                    color: #7dd3fc;
+                    border: 1px solid #38bdf8;
+                }
+                .pass-architecture {
+                    background: linear-gradient(135deg, #1a2e05 0%, #2d4a0a 100%);
+                    color: #86efac;
+                    border: 1px solid #4ade80;
+                }
+                .pass-implementation {
+                    background: linear-gradient(135deg, #3b0764 0%, #581c87 100%);
+                    color: #d8b4fe;
+                    border: 1px solid #a855f7;
+                }
+                .pass-tag {
+                    font-size: 0.7em;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                .tag-rag { background: #0c4a6e; color: #7dd3fc; }
+                .tag-precise { background: #14532d; color: #86efac; }
+                .tag-mcp { background: #3b0764; color: #d8b4fe; }
+            </style>
+            """);
+
+        sb.AppendLine("""
+            <div class="pass-header pass-discovery">
+                <span>Pass 1: Discovery &amp; Opportunity Clustering</span>
+                <span class="pass-tag tag-rag">RAG-Grounded · t=0.7</span>
+            </div>
+            """);
+        sb.AppendLine(discoveryHtml);
+
+        sb.AppendLine("""
+            <div class="pass-header pass-architecture">
+                <span>Pass 2: Production Architecture &amp; Hardening</span>
+                <span class="pass-tag tag-precise">Evidence-Precise · t=0.3</span>
+            </div>
+            """);
+        sb.AppendLine(architectureHtml);
+
+        if (!string.IsNullOrWhiteSpace(implementationHtml))
+        {
+            sb.AppendLine("""
+                <div class="pass-header pass-implementation">
+                    <span>Pass 3: Implementation Readiness &amp; Learning Path</span>
+                    <span class="pass-tag tag-mcp">Microsoft Learn MCP</span>
+                </div>
+                """);
+            sb.AppendLine(implementationHtml);
+        }
+
+        sb.AppendLine("</div>");
+        return sb.ToString();
     }
 
     private async Task<string> ContinueConversationAsync(string prompt)

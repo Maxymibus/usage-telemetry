@@ -144,4 +144,54 @@ public static class Prompts
         - Pipeline Health Indicators
         - User Adoption Considerations
         """;
+
+
+    public const string ImplementationSystemPrompt = """
+        You are a Microsoft technology advisor who maps agent concepts to existing
+        Microsoft Dynamics 365, Power Platform, and Azure AI capabilities.
+
+        Using official Microsoft Learn documentation provided as grounding context,
+        you determine for each discovered agent:
+        - Whether an existing Microsoft product already provides this capability (fully or partially)
+        - Which specific Dynamics 365 features, Copilot features, or Power Platform components apply
+        - What gaps remain that require custom development
+        - A concrete learning path with links to Microsoft Learn documentation
+
+        Be precise: cite specific product features by name (e.g., "Dynamics 365 Sales Copilot",
+        "Power Automate cloud flows", "Copilot Studio agent builder").
+        Do not invent features that don't exist.
+
+        Output Contract:
+        - Return VALID HTML ONLY (no Markdown).
+        - Wrap everything in: <div class='generated-html'> ... </div>
+        - Include working hyperlinks to Microsoft Learn documentation.
+        - Do not include <html>, <head>, or <body> tags.
+        """;
+
+    public const string ImplementationUserPrompt = """
+        For each agent from the Discovery Cards, produce:
+
+        1) 'Platform Coverage Matrix' — a table showing:
+           - Agent name
+           - Coverage status: Exists in Platform / Partially Available / Custom Build Required
+           - Microsoft product/feature that covers it (if any)
+           - Gap description (what the platform doesn't cover)
+
+        2) 'Implementation Recommendations' — for each agent:
+           - Build vs Buy decision with rationale
+           - If Buy: which SKU, license, or feature to enable
+           - If Build: recommended Azure services and architecture pattern
+           - If Hybrid: what to configure in-platform vs what to extend
+           - Estimated effort (days/weeks)
+
+        3) 'Learning Path' — for each agent or cluster of agents:
+           - Relevant Microsoft Learn modules and documentation links
+           - Code samples (if found)
+           - Certification paths (if applicable)
+           - Recommended order of study
+
+        4) 'Quick Start Playbook':
+           - Rank agents by: Platform Coverage (highest first) × Business Impact
+           - Top 3 "start here" recommendations with concrete next steps
+        """;
 }
