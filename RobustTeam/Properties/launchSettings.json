@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "AiUseCaseDiscovery": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__DefaultConnection": "Server=localhost;Database=AiUseCaseDiscovery;Trusted_Connection=True;TrustServerCertificate=True"
+      },
+      "applicationUrl": "https://localhost:58968;http://localhost:58969"
+    }
+  }
+}

@@ -1,0 +1,120 @@
+
+@* _Layout.cshtml — uses your Limitless CSS/JS and a standard sidebar layout *@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] - AI Use Case Discovery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Global stylesheets (your uploaded files) -->
+
+    <link href="~/css/site.css" rel="stylesheet" />
+    <link href="~/css/bootstrap.css" rel="stylesheet" />
+    <link href="~/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/css/bootstrap_limitless.css" rel="stylesheet" />
+    <link href="~/css/bootstrap_limitless.min.css" rel="stylesheet" />
+    <link href="~/css/components.css" rel="stylesheet" />
+    <link href="~/css/components.min.css" rel="stylesheet" />
+    <link href="~/css/layout.css" rel="stylesheet" />
+    <link href="~/css/layout.min.css" rel="stylesheet" />
+
+</head>
+<body>
+
+    <!-- Main navbar -->
+    <div class="navbar navbar-dark navbar-expand-lg navbar-static border-bottom border-bottom-white border-opacity-10">
+        <div class="container-fluid">
+
+            <!-- Brand -->
+            <div class="navbar-brand d-flex align-items-center">
+                Index
+                    <span class="fw-semibold">AI Use Case Discovery</span>
+                </a>
+            </div>
+
+            <!-- Right-side items -->
+           
+            <ul class="navbar-nav ms-auto">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <li class="nav-item d-flex align-items-center">
+                        <span class="navbar-text me-3">Hello @User.Identity.Name</span>
+                    </li>
+                    <li class="nav-item">
+                        /Account/LogoutLogout</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="nav-item">
+                        /Account/LoginLogin</a>
+                    </li>
+                }
+            </ul>
+
+        </div>
+    </div>
+    <!-- /main navbar -->
+
+    <!-- Page content -->
+    <div class="page-content">
+
+        <!-- Main sidebar -->
+        <div class="sidebar sidebar-dark sidebar-main sidebar-expand-lg">
+            <div class="sidebar-content">
+
+                <!-- Sidebar header -->
+                <div class="sidebar-section sidebar-section-body d-flex align-items-center">
+                    <h6 class="mb-0">Navigation</h6>
+                </div>
+
+                <!-- Main navigation -->
+                <div class="card card-sidebar-mobile">
+                    <ul class="nav nav-sidebar" data-nav-type="accordion">
+                        <li class="nav-item">
+                            Index
+                                <i class="ph-house"></i>
+                                <span>Home</span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            Index
+                                <i class="ph-gear"></i>
+                                <span>Settings</span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            /hangfire
+                                <i class="ph-stacks"></i>
+                                <span>Jobs</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <!-- /main navigation -->
+
+            </div>
+        </div>
+        <!-- /main sidebar -->
+
+        <!-- Main content -->
+        <div class="content-wrapper">
+            <div class="content">
+                @RenderBody()
+            </div>
+        </div>
+        <!-- /main content -->
+
+    </div>
+    <!-- /page content -->
+
+    <!-- Core JS files (your uploaded files) -->
+
+    <script src="~/js/app.js"></script>
+    <script src="~/js/custom.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

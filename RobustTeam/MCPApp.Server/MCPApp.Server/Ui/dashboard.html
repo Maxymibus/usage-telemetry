@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Contoso KPI Dashboard</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #0063B1;
+        }
+
+        .kpi {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f3f3f3;
+            border-radius: 6px;
+        }
+
+        button {
+            margin-right: 10px;
+            padding: 6px 12px;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        #chart {
+            margin-top: 20px;
+        }
+
+        .bar {
+            background: #0063B1;
+            height: 20px;
+            margin: 4px 0;
+            color: white;
+            padding-left: 4px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Contoso KPI Dashboard</h1>
+
+    <div class="kpi">
+        <p><strong>Current KPIs</strong></p>
+        <pre id="kpi-json">Loading...</pre>
+        <button id="btn-refresh">Refresh KPIs</button>
+        <button id="btn-open-history">Open KPI History</button>
+        <div id="status"></div>
+    </div>
+
+    <div id="chart">
+        <h2>Revenue (from KPI history)</h2>
+        <div id="chart-bars"></div>
+    </div>
+
+    <script>
+        async function callTool(name, args = {}) {            
+            return window.mcp?.callTool
+                ? await window.mcp.callTool(name, args)
+                : { error: "MCP bridge not available in this environment." };
+        }
+
+        async function loadKpis() {
+            document.getElementById('status').textContent = 'Loading KPIs...';
+            const result = await callTool('contoso_get_kpis');
+            document.getElementById('kpi-json').textContent = JSON.stringify(result, null, 2);
+            document.getElementById('status').textContent = '';
+        }
+
+        async function refreshDashboard() {
+            document.getElementById('status').textContent = 'Refreshing dashboard (task)...';
+            const result = await callTool('contoso_refresh_dashboard');
+            document.getElementById('status').textContent = result;
+        }
+
+        async function loadHistory() {
+            const result = await callTool('contoso_get_kpi_history');
+            const container = document.getElementById('chart-bars');
+            container.innerHTML = '';
+            if (!result || !result.points) return;
+
+            const max = Math.max(...result.points.map(p => p.revenue));
+            result.points.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'bar';
+                const width = (p.revenue / max) * 100;
+                div.style.width = width + '%';
+                div.textContent = `${p.label}: ${p.revenue.toLocaleString()}`;
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById('btn-refresh').addEventListener('click', async () => {
+            await refreshDashboard();
+            await loadKpis();
+            await loadHistory();
+        });
+
+        document.getElementById('btn-open-history').addEventListener('click', () => {
+            // Ask Claude to open the KPI history page
+            if (window.mcp?.openResource) {
+                window.mcp.openResource('ui://contoso/kpi-history');
+            }
+        });
+
+        (async () => {
+            await loadKpis();
+            await loadHistory();
+        })();
+    </script>
+</body>
+</html>

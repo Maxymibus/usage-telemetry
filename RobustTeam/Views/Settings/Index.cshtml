@@ -1,0 +1,19 @@
+
+@model AiUseCaseDiscovery.Models.UserAiSettings
+
+<h2>Azure OpenAI Settings</h2>
+<form method="post" asp-action="Save">
+    <div>
+        <label>Endpoint</label>
+        <input asp-for="AzureOpenAiEndpoint" />
+    </div>
+    <div>
+        <label>API Key</label>
+        <input asp-for="AzureOpenAiApiKey" />
+    </div>
+    <div>
+        <label>Deployment</label>
+        <input asp-for="DeploymentName" />
+    </div>
+    <button type="submit">Save</button>
+</form>

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="external/csharp-sdk/src/ModelContextProtocol.Analyzers/ModelContextProtocol.Analyzers.csproj" />
+  <Project Path="external/csharp-sdk/src/ModelContextProtocol.AspNetCore/ModelContextProtocol.AspNetCore.csproj" />
+  <Project Path="external/csharp-sdk/src/ModelContextProtocol.Core/ModelContextProtocol.Core.csproj" />
+  <Project Path="external/csharp-sdk/src/ModelContextProtocol/ModelContextProtocol.csproj" />
+  <Project Path="MCPApp.Server/MCPApp.Server.csproj" />
+</Solution>

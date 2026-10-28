@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Contoso KPI History</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #0063B1;
+        }
+
+        #chart-bars {
+            margin-top: 20px;
+        }
+
+        .bar {
+            background: #107C10;
+            height: 20px;
+            margin: 4px 0;
+            color: white;
+            padding-left: 4px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Contoso KPI History</h1>
+    <p>This view focuses on historical revenue data.</p>
+    <div id="chart-bars"></div>
+
+    <script>
+        async function callTool(name, args = {}) {
+            return window.mcp?.callTool
+                ? await window.mcp.callTool(name, args)
+                : { error: "MCP bridge not available in this environment." };
+        }
+
+        async function loadHistory() {
+            const result = await callTool('contoso_get_kpi_history');
+            const container = document.getElementById('chart-bars');
+            container.innerHTML = '';
+            if (!result || !result.points) return;
+
+            const max = Math.max(...result.points.map(p => p.revenue));
+            result.points.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'bar';
+                const width = (p.revenue / max) * 100;
+                div.style.width = width + '%';
+                div.textContent = `${p.label}: ${p.revenue.toLocaleString()}`;
+                container.appendChild(div);
+            });
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>
